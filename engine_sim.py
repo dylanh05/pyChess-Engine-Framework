@@ -11,7 +11,7 @@ def main():
     pygame.init()
 
     # Choose which engine plays w white and black
-    white_engine = minimax.Engine("white")
+    white_engine = materialistic_engine.Engine("white")
     black_engine = materialistic_engine.Engine("black")
 
     white_wins = 0
