@@ -10,19 +10,17 @@ def main():
     pygame.init()
 
     # Choose which engine plays w white and black
-    white_engine = engine.Engine("white")
-    black_engine = materialistic_engine.Engine("black")
+    white_engine = materialistic_engine.Engine("white")
+    black_engine = engine.Engine("black")
 
     white_wins = 0
     black_wins = 0
     draws = 0
-    n_games = 1000
+    n_games = 100
 
     for _ in range(0, n_games):
         render = draw.Render(white_engine, black_engine)
         outcome = render.draw_screen()
-        print(outcome)
-
         if outcome == True:
             white_wins += 1
         elif outcome == False:

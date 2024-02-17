@@ -31,6 +31,15 @@ class Engine:
 
     # ACTUALLY RN INPUT POSITIONS ARE chess.board objects!!!!   
     def evaluate(self, position):
+        if position.is_checkmate():
+            if self.color == "black":
+                return -10000
+            else:
+                return 10000
+        
+        if position.is_stalemate():    
+            return 0
+        
         # YOUR CODE HERE
         fen = ''.join(str(position).split())
         
