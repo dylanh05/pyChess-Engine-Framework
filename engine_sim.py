@@ -5,18 +5,19 @@ import sys
 sys.path.insert(1, './engines')
 # import any other engines here
 import materialistic_engine
+import minimax
 
 def main():
     pygame.init()
 
     # Choose which engine plays w white and black
-    white_engine = materialistic_engine.Engine("white")
-    black_engine = engine.Engine("black")
+    white_engine = minimax.Engine("white")
+    black_engine = materialistic_engine.Engine("black")
 
     white_wins = 0
     black_wins = 0
     draws = 0
-    n_games = 100
+    n_games = 10
 
     for _ in range(0, n_games):
         render = draw.Render(white_engine, black_engine)

@@ -19,6 +19,10 @@ class Game:
             return True
         return False
 
+    # Gets all legal moves starting from square
+    def get_legal_moves(self, square):
+        return [str(move)[2:4] for move in self.board.legal_moves if str(move)[:2] == square]
+
 
     def make_move(self, move, print_move):
         move = chess.Move.from_uci(move)

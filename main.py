@@ -4,13 +4,14 @@ import engine
 import sys
 sys.path.insert(1, './engines')
 import materialistic_engine
+import minimax
 
 
 def main():
     pygame.init()
 
     # Set engine to play as white, black, both or none for 2 player games
-    chess_engine = engine.Engine("black")
+    chess_engine = minimax.Engine("white")
     render = draw.Render(chess_engine, "none")
     render.draw_screen()
     pygame.quit()
