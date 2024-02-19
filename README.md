@@ -9,5 +9,5 @@ Example of a strongish chess bot see engines/minimax.py
 
 Example of minimax playing a very slightly dumbed down version of itself:
 <div align="center">
-![](https://github.com/dylanh05/pyChess-Engine-Framework/blob/main/python-chess-engine.gif)
+<img_src = 'https://github.com/dylanh05/pyChess-Engine-Framework/blob/main/python-chess-engine.gif'>
 </div>
