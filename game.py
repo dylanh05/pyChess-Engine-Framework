@@ -25,6 +25,8 @@ class Game:
 
 
     def make_move(self, move, print_move):
+        if self.board.can_claim_draw():
+            self.board.reset()
         move = chess.Move.from_uci(move)
         if print_move:
             print(self.board.san(move))
@@ -32,6 +34,8 @@ class Game:
 
     
     def make_move_uci(self, move, print_move):
+        if self.board.can_claim_draw():
+            self.board.reset()
         if print_move:
             print(self.board.san(move))
         self.board.push(move)

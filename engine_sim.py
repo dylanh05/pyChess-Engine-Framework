@@ -6,12 +6,13 @@ sys.path.insert(1, './engines')
 # import any other engines here
 import materialistic_engine
 import minimax
+import minimax_copy
 
 def main():
     pygame.init()
     pygame.font.init()
     # Choose which engine plays w white and black
-    white_engine = minimax.Engine("white")
+    white_engine = minimax_copy.Engine("white")
     black_engine = minimax.Engine("black")
 
     white_wins = 0

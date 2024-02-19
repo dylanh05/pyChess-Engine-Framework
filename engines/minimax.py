@@ -5,7 +5,7 @@ import weakref
 
 class Engine:
     def __init__(self, color):
-        self.depth = 3
+        self.depth = 4
         self.color = color
         self.is_eg = False
         self.eval_value = 0
@@ -242,7 +242,7 @@ class Engine:
                 if self.is_eg:
                     score += self.eg_table[index][flip_index]
                 else:
-                    score += self.eg_table[index][flip_index]
+                    score += self.mg_table[index][flip_index]
         return score
 
     
@@ -265,19 +265,23 @@ class Engine:
     # Position is a chess board
     @lru_cache
     def make_move(self, board):
-        # If move one, choose one of the moves
-        # e4   d4   c4  f4  nf3 
+        # If move one, choose random move 
         if board == chess.Board():
-            moves = [chess.Move.from_uci("g1f3"), chess.Move.from_uci("e2e4"), chess.Move.from_uci("d2d4"),
-                     chess.Move.from_uci("f2f4"), chess.Move.from_uci("c2c4"), chess.Move.from_uci("e2e4")]
-            return moves[random.randint(0, len(moves)-1)], 0.5
+            moves = list(board.legal_moves)
+            return moves[random.randint(0, len(moves)-1)], 0
 
         # if e4, choose one of the moves   
 
         self.check_eg(board)
         move = self.make_move_helper(board, depth=self.depth)
         #print("Current evaluation is: " + str((self.eval_value + 300)/100))
-        return move, (self.eval_value + 300)/100
+
+        if self.color == "white":
+            self.eval_value = (self.eval_value + 300)/100 - .5
+        else:
+            self.eval_value = (self.eval_value + 300)/100 + .5
+
+        return move, self.eval_value
 
     @lru_cache
     def make_move_helper(self, board, depth):
