@@ -35,4 +35,4 @@ class Engine:
         # Example engine that randomly selects a random legal move:
         move = list(position.legal_moves)[random.randint(0, position.legal_moves.count()-1)]
 
-        return move
+        return move, None

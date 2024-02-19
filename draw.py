@@ -3,12 +3,17 @@ import game
 
 class Render:
     def __init__(self, engine, engine_for_sim):
+        self.font = pygame.font.SysFont("liberationserif", 14)
+        self.draw_eval_bar = True
         self.cell_size = 80
+        self.eval_bar_thkness = 40
         self.black_sq_color = (210, 180, 140)
         self.white_sq_color = (252, 248, 220)
         self.highlight_color = (255,255,153)
+        self.eval_bar_white_col = (255, 255, 255)
+        self.eval_bar_black_col = (0, 0, 0)
 
-        self.screen = pygame.display.set_mode((self.cell_size*8, self.cell_size*8))
+        self.screen = pygame.display.set_mode((self.cell_size*8+self.eval_bar_thkness, self.cell_size*8))
         self.clock = pygame.time.Clock()
 
         self.xposition_map = {self.cell_size*i:chr(i+97) for i in range(0,8)}
@@ -38,6 +43,9 @@ class Render:
         self.game = game.Game()
         self.move = ""
         self.turn = "white"
+        self.eval = 0
+        self.text = 0
+        self.eval_text = 0
         self.game_over = False
         self.engine = engine
         self.engine_sim = engine_for_sim
@@ -70,6 +78,7 @@ class Render:
             if(piece != "."):    
                 self.screen.blit(self.assets[piece], (self.cell_size*(i%8), self.cell_size*j))
 
+
     def draw_highlighted_squares(self, board):
         if self.highlight:
             for rect in self.highlight_squares:
@@ -78,6 +87,26 @@ class Render:
                 s.fill(self.highlight_color)           # this fills the entire surface
                 self.screen.blit(s, (rect[0],rect[1]))    # (0,0) are the top-left coordinates
         return board
+
+
+    def draw_eval(self, eval):
+        if self.draw_eval_bar:
+                w = pygame.Surface((self.eval_bar_thkness, self.cell_size*8))
+                w.fill(self.eval_bar_white_col)
+                height = -eval*30+self.cell_size*4
+                if height < 0:
+                    height = 0
+                b = pygame.Surface((self.eval_bar_thkness, height))
+                b.fill(self.eval_bar_black_col)
+                self.screen.blit(w, (self.cell_size*8, 0))    # (0,0) are the top-left coordinates
+                self.screen.blit(b, (self.cell_size*8, 0))
+
+        else:
+            b = pygame.Surface((self.eval_bar_thkness, self.cell_size*8))
+            b.fill(self.eval_bar_black_col)
+            self.screen.blit(b, (self.cell_size*8, 0))
+
+        self.screen.blit(self.text, self.eval_text)
 
 
     def map_coord_to_square(self, pos):
@@ -92,6 +121,7 @@ class Render:
         y = (pos[1] - pos[1] % self.cell_size)/self.cell_size
         return int(y*8 + x) 
 
+
     def highlight_legal_moves(self, square):
         squares = self.game.get_legal_moves(square)
         rect_pos = []
@@ -99,6 +129,7 @@ class Render:
             rect_pos.append((self.san_to_xposition[coord[0]], self.san_to_yposition[int(coord[1])]))
 
         self.highlight_squares = rect_pos
+
 
     def handle_move(self, pos):
         square = self.map_coord_to_square(pos)
@@ -133,6 +164,7 @@ class Render:
                 self.highlight = True
                 self.move = square
 
+
     def handle_engine_move(self):
         game_state = self.game.get_board_raw()
 
@@ -140,7 +172,10 @@ class Render:
         if self.engine_sim == "none":
             print_move = True
 
-        move = self.engine.make_move(game_state)
+        move, eval = self.engine.make_move(game_state)
+        if eval == None:
+            eval = self.eval
+
         self.game.make_move_uci(move, print_move)
 
         if self.turn == "white":
@@ -151,10 +186,15 @@ class Render:
         if self.game.check_game_over():
             self.game_over = True
 
+        return eval
+
 
     def handle_black_engine_move(self):
         game_state = self.game.get_board_raw()
-        move = self.engine_sim.make_move(game_state)
+        move, eval = self.engine_sim.make_move(game_state)
+        if eval == None:
+            eval = self.eval
+
         self.game.make_move_uci(move, False)
 
         if self.turn == "white":
@@ -165,11 +205,33 @@ class Render:
         if self.game.check_game_over():
             self.game_over = True
 
+        return eval
+
+    def go_back_one_move(self):
+        try:
+            self.game.get_board_raw().pop()
+            eval = self.handle_engine_move() 
+            if eval != None:
+                self.eval = eval
+            self.game.get_board_raw().pop()
+            self.move = ""
+        except:
+            print("No moves made, cannot go back.")
+            
+        if self.turn == "black":
+            self.turn = "white"
+        else:
+            self.turn = "black"
+
 
     def draw_screen(self):
         running = True
         board = self.draw_board()
 
+        # Evaluation text
+        self.text = self.font.render(str(round(self.eval, 1)), True, self.eval_bar_black_col)
+        self.eval_text = self.text.get_rect()
+        self.eval_text.center = (self.cell_size*8 + self.eval_bar_thkness // 3, self.cell_size*8 - 20)
         while running:
             # poll for events
             # pygame.QUIT event means the user clicked X to close your window
@@ -182,17 +244,21 @@ class Render:
                     if not self.game_over:
                         self.handle_move(pos)
 
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LEFT:
+                        self.go_back_one_move()
+
             if self.engine_sim == "none":
                 if not self.game_over:
                     if self.turn == self.engine.get_color() or self.engine.get_color() == "both":
-                        self.handle_engine_move()
+                        self.eval = self.handle_engine_move()
 
             else:
                 if not self.game_over:
                     if self.turn == "white":
-                        self.handle_engine_move()
+                        self.eval = self.handle_engine_move()
                     else:
-                        self.handle_black_engine_move()
+                        self.eval = self.handle_black_engine_move()
 
                 else:
                     running = False        
@@ -201,10 +267,12 @@ class Render:
             self.screen.fill("purple")
 
             # RENDER YOUR GAME HERE
+            self.text = self.font.render(str(round(self.eval, 1)), True, self.eval_bar_black_col)
             self.screen.blit(board, board.get_rect())
             self.draw_highlighted_squares(board)
             self.draw_pieces()
-
+            self.draw_eval(self.eval)
+            
             # flip() the display to put your work on screen
             pygame.display.flip()
 

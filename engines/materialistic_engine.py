@@ -4,6 +4,7 @@ import random
 class Engine:
     def __init__(self, color):
         self.color = color
+        self.eval
         self.values = {
             "r": -5,
             "n": -3,
@@ -80,4 +81,6 @@ class Engine:
                     best_move = move
             position.pop()
 
-        return best_move
+        self.eval = best_score
+
+        return best_move, self.eval
