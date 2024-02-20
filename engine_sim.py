@@ -6,6 +6,7 @@ sys.path.insert(1, './engines')
 # import any other engines here
 import materialistic_engine
 import minimax
+import aggy_king
 
 def main():
     pygame.init()

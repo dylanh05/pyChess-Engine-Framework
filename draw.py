@@ -175,8 +175,11 @@ class Render:
         move, eval = self.engine.make_move(game_state)
         if eval == None:
             eval = self.eval
-
-        self.game.get_board_raw().push(move)
+        else:
+            if move in list(self.game.get_board_raw().legal_moves):
+                self.game.get_board_raw().push(move)
+            else:
+                return eval
         pos = self.game.get_board_raw()
         if pos.can_claim_draw():    
             self.eval = 0
@@ -200,8 +203,12 @@ class Render:
         move, eval = self.engine_sim.make_move(game_state)
         if eval == None:
             eval = self.eval
+        else:
+            if move in list(self.game.get_board_raw().legal_moves):
+                self.game.get_board_raw().push(move)
+            else:
+                return eval
 
-        self.game.get_board_raw().push(move)
         pos = self.game.get_board_raw()
         if pos.can_claim_draw():    
             self.eval = 0

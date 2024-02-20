@@ -2,7 +2,20 @@ import random
 import chess
 from functools import wraps, lru_cache
 import weakref
-import pygame
+
+e4 = chess.Move.from_uci("e2e4")
+e5 = chess.Move.from_uci("e7e5")
+d4 = chess.Move.from_uci("d2d4")
+d5 = chess.Move.from_uci("d7d5")
+c4 = chess.Move.from_uci("c2c4")
+c5 = chess.Move.from_uci("c7c5")
+nf3 = chess.Move.from_uci("g1f3")
+nc3 = chess.Move.from_uci("b1c3")
+f4 = chess.Move.from_uci("f2f4")
+e3 = chess.Move.from_uci("e2e3")
+g3 = chess.Move.from_uci("g2g3")
+
+
 
 class Engine:
     def __init__(self, color):
@@ -11,6 +24,7 @@ class Engine:
         self.color = color
         self.is_eg = False
         self.is_op = True
+        self.first_move = True
         self.eval_value = 0
         self.values = {
             "p": -100,
@@ -26,6 +40,28 @@ class Engine:
             "Q": 1200,
             "K": 9000,
             ".": 0,
+        }     
+
+        self.opening_positions = {
+            "move_1_white": {
+                tuple([]): [e4, d4, c4, e3,f4, nf3, g3],
+            },
+            "move_1_black": {
+                tuple([e4]) : [e5, c5, chess.Move.from_uci("c7c6")],
+                tuple([d4]) : [d5, chess.Move.from_uci("g8f6")],
+                tuple([c4]) : [c5, e5, chess.Move.from_uci("e7e6")],
+                tuple([g3]) : [c5, d5, e5],
+                tuple([nf3]) : [c5, d5, chess.Move.from_uci("c7c6"), 
+                                                     chess.Move.from_uci("e7e6"), chess.Move.from_uci("g8f6")],
+            },
+            "move_2_white": {
+                tuple([e4,e5]) : [nf3, nc3, chess.Move.from_uci("f1c4"), d4, f4],
+                tuple([e4, c5]) : [d4, nf3, chess.Move.from_uci("c2c3"), nc3],
+                tuple([e4, c5]) : [d4, nf3, chess.Move.from_uci("c2c3"), nc3],
+                tuple([d4, d5]) : [g3, nf3, c4, chess.Move.from_uci("c1f4")],
+                tuple([c4, c5]) : [e3, nf3, e4, nc3],
+                tuple([c4, e5]) : [chess.Move.from_uci("g2g3"), nf3, chess.Move.from_uci("e2e3"), nc3],
+            },
         }
 
         mg_pawn_table = [
@@ -52,9 +88,9 @@ class Engine:
 
         mg_knight_table = [
             -167, -89, -34, -49,  61, -97, -15, -107,
-            -73, -41,  40,  36,  23,  40,   7,  -17,
+            -73, -41,  5,  3,  2,  4,   1,  -17,
             -47,  31,  2,  4,  7, 6,  3,   3,
-            -9,  1,  2,  5,  3,  30,  1,   2,
+            -9,  1,  2,  5,  3,  3,  1,   2,
             -13,   2,  1,  3,  2,  1,  2,   -8,
             -23,  -9,  1,  1,  1,  1,  25,  -16,
             -29, -53, -12,  -3,  -1,  18, -14,  -19,
@@ -139,7 +175,7 @@ class Engine:
             -49,  -1, -27, -39, -46, -44, -33, -51,
             -14, -14, -22, -46, -44, -30, -15, -27,
             1,   7,  -54, -64, -43, -40,   9,   8,
-            -15,  36,  -54, -54,   -54, -28,  24,  14]
+            -15,  36,  -54, -28,  -28, -28,  24,  14]
 
         eg_king_table = [
             -74, -35, -18, -18, -11,  15,   4, -17,
@@ -218,6 +254,25 @@ class Engine:
             func, maxsize = maxsize, 128
             return decorator(func)
         return decorator
+    
+
+    def eval_value_adjust(self, board):
+        fen = ''.join(str(board).split())
+        score = 0
+        for i in range(0, len(fen)):
+            piece = fen[i]
+            score += self.values[piece]
+
+        if board.turn == chess.WHITE:
+            if abs(score) < 110:
+                self.eval_value = (self.eval_value+1700)/550
+            else:
+                self.eval_value = (self.eval_value+1700)/200 + score/200
+        else:
+            if abs(score) < 110:
+                self.eval_value = (self.eval_value+1700)/550
+            else:
+                self.eval_value = (self.eval_value+1700)/200 + score/200
 
     # Define your own evaluation function here
     # Input positions are a single string with characters represeting pieces (lowercase black, uppercase white)
@@ -225,12 +280,6 @@ class Engine:
     # rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR
     def evaluate(self, position):
         score = 0
-        #color = position.turn
-        #if position.has_castling_rights(color):
-        #    if color == chess.BLACK:
-        #        score -= 300
-        #    else:
-        #        score += 300
 
         if position.is_checkmate():
             winner = position.outcome().winner
@@ -285,7 +334,39 @@ class Engine:
                 else:
                     score -= self.mg_table[index][flip_index]
        
+            score += random.randint(-10, 10)
         return score
+
+
+    def check_and_make_opening_move(self, board):
+        start_pos = chess.Board()
+
+        for opening_pos in self.opening_positions:
+            for moves in self.opening_positions[opening_pos]:
+                if board == chess.Board():
+                    if moves == tuple([]) and self.first_move:
+                        self.first_move = False
+                        return self.opening_positions[opening_pos][moves]
+                
+                else:
+                    n_moves = len(moves)
+
+                    for move in moves:
+                        start_pos.push(move)
+
+                    if board == start_pos:
+                        return self.opening_positions[opening_pos][moves]
+                    
+                    for _ in range(0, n_moves):
+                        start_pos.pop()
+                        
+
+                    #if count > 1:
+                    #    for _ in range(0, count-2):
+                    #        board.pop()
+
+        self.opening_prep = False
+        return moves    
 
 
     def check_op(self, board):
@@ -311,104 +392,40 @@ class Engine:
 
     
     def check_eg(self, board):
-        no_queens = True
-
         fen = ''.join(str(board).split())
         score = 0
         for i in range(0, len(fen)):
             piece = fen[i]
-            score += self.values[piece]
-            if piece == 'q' or piece == 'Q':
-                no_queens = False
-        
-        if score/100 < 13 and no_queens:
+            if piece == "k" or piece == "K":
+                continue
+            score += abs(self.values[piece])
+
+        # If in eg, deepen the search by 1
+        if score/100 < 40 and not self.is_eg:
+            self.depth = self.depth + 1
             self.is_eg = True
+
 
 
     def openings(self, board):
         moves = []
-
-        e4 = chess.Move.from_uci("e2e4")
-        e5 = chess.Move.from_uci("e7e5")
-        d4 = chess.Move.from_uci("d2d4")
-        d5 = chess.Move.from_uci("d7d5")
-        c4 = chess.Move.from_uci("c2c4")
-        c5 = chess.Move.from_uci("c7c5")
-        nf3 = chess.Move.from_uci("g1f3")
-        nc3 = chess.Move.from_uci("b1c3")
-
-
-        # If Move 1, choose an opening move 
-        position = chess.Board()
-        if board == position:
-            self.eval_value = 0
-            moves = [e4, d4, c4, chess.Move.from_uci("e2e3"),
-                     nf3, chess.Move.from_uci("g2g3")]
-
-        # Move 1 black
-        # if e4, choose one of the moves
-        position.push(e4)
-        if board == position:
-            moves = [e5, c5, chess.Move.from_uci("c7c6")]
-        position.pop()
-
-        # if d4, choose one of the moves
-        position.push(d4)   
-        if board == position:
-            moves = [d5, chess.Move.from_uci("g8f6")]
-        position.pop()
-
-        # if c4, choose one of the moves
-        position.push(c4) 
-        if board == position:
-            moves = [c5, e5, chess.Move.from_uci("e7e6")]
-        position.pop()
-
-        # Move 2 white
-        # e4 e5
-        position.push(e4)
-        position.push(e5)
-        if board == position:
-            moves = [nf3, nc3, chess.Move.from_uci("f1c4"), d4]
-        position.pop()
-        # e4 c5
-        position.push(c5)
-        if board == position:
-            moves = [d4, nf3, chess.Move.from_uci("c2c3"), nc3]
-        position.pop()
-        position.pop()
-        # d4 d5
-        position.push(d4)
-        position.push(d5)
-        if board == position:
-            moves = [chess.Move.from_uci("g2g3"), nf3, c4, chess.Move.from_uci("c1f4")]
-        position.pop()
-        position.pop()
-
-        # c4 c5
-        position.push(c4)
-        position.push(c5)
-        if board == position:
-            moves = [chess.Move.from_uci("e2e3"), nf3, e4, nc3]
-        position.pop()
-        # c4 e5
-        position.push(e5)
-        if board == position:
-            moves = [chess.Move.from_uci("g2g3"), nf3, chess.Move.from_uci("e2e3"), nc3]
+        moves = self.check_and_make_opening_move(board)
 
         if moves == []:
+            self.first_move = False
             self.opening_prep = False
             return moves, 0
 
         else:
-            return moves[random.randint(0, len(moves)-1)], 0
+            index = random.randint(0, len(moves)-1)
+            return moves[index], 0
 
 
     # Returns a UCI move based on search and evaluation of position
     # Position is a chess board
     def make_move(self, board):
-        move, eval = self.openings(board)
         if self.opening_prep:
+            move, eval = self.openings(board)
             self.eval_value = eval
             return move, eval
 
@@ -416,11 +433,8 @@ class Engine:
         self.check_eg(board)
         move = self.make_move_helper(board, depth=self.depth)
 
-        #print(self.eval_value)
-        if board.turn == chess.WHITE:
-            self.eval_value = (self.eval_value+1700)/250
-        else:
-            self.eval_value = (self.eval_value+1700)/250 - 1
+        self.eval_value_adjust(board)
+        #print(self.eval)
 
         board.push(move)
         if board.can_claim_draw():
@@ -459,7 +473,7 @@ class Engine:
 
         for move in moves:
             board.push(move)
-            value = self.minimax_helper(depth - 1, board, -10000, 10000, not is_white)
+            value = self.minimax_helper(depth - 1, board, -10000000000, 1000000000, not is_white)
             board.pop()
             if (is_white and value > best_move) or (not is_white and value < best_move):
                 best_move = value
@@ -472,20 +486,13 @@ class Engine:
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
         if depth <= 0 or board.is_game_over():
             return self.evaluate(board)
-        
-        is_white = False
-        if board.turn == chess.WHITE:
-            is_white = True
 
         if is_maximizing:
             best_move = -100000
             moves = list(board.legal_moves)
             move_val_estimates = []
             for move in moves:
-
                 board.push(move)
-                #fen = ''.join(str(board).split())
-
                 move_val_estimates.append(self.evaluate(board))
                 board.pop()
         
@@ -493,20 +500,8 @@ class Engine:
             moves.reverse()
             
             for move in moves:
-                #is_castling = False
-                #if board.is_castling(move):
-                #    is_castling = True
-
                 board.push(move)
-                value = self.minimax_helper(depth - 1, board, alpha, beta, is_white)
-                #if is_castling:
-                #    if board.turn == chess.BLACK:
-                #        value += 300
-                #    else:
-                #        value -= 300
-                #if self.is_op and :
-
-
+                value = self.minimax_helper(depth - 1, board, alpha, beta, False)
                 board.pop()
                 best_move = max(best_move, value)
                 alpha = max(alpha, best_move)
@@ -527,17 +522,8 @@ class Engine:
             moves = [x for _, x in sorted(zip(move_val_estimates, moves), key=lambda pair: pair[0])]
 
             for move in moves:
-                #is_castling = False
-                #if board.is_castling(move):
-                #    is_castling = True
-
                 board.push(move)
-                value = self.minimax_helper(depth - 1, board, alpha, beta, is_white)
-                #if is_castling:
-                #    if board.turn == chess.BLACK:
-                #        value += 300
-                #    else:
-                #        value -= 300
+                value = self.minimax_helper(depth - 1, board, alpha, beta, True)
                 board.pop()
                 best_move = min(best_move, value)
                 beta = min(beta, best_move)
@@ -566,7 +552,7 @@ class Engine:
             if draw_move == move:
                 continue
             board.push(move)
-            value = self.minimax_helper(depth - 1, board, -10000, 10000, not is_white)
+            value = self.minimax_helper(depth - 1, board, -10000000000, 1000000000, not is_white)
             board.pop()
             if (is_white and value > best_move) or (not is_white and value < best_move):
                 best_move = value
