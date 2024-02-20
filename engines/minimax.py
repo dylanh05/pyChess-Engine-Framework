@@ -2,65 +2,70 @@ import random
 import chess
 from functools import wraps, lru_cache
 import weakref
+import pygame
 
 class Engine:
     def __init__(self, color):
-        self.depth = 4
+        self.depth = 3
+        self.opening_prep = True
         self.color = color
         self.is_eg = False
+        self.is_op = True
         self.eval_value = 0
         self.values = {
             "p": -100,
             "n": -320,
             "b": -330,
             "r": -500,
-            "q": -900,
+            "q": -1200,
             "k": -9000,
             "P": 100,
             "N": 320,
             "B": 330,
             "R": 500,
-            "Q": 900,
+            "Q": 1200,
             "K": 9000,
             ".": 0,
         }
 
-        mg_pawn_table= [
-            0,   0,   0,   0,   0,   0,  0,   0,
-            98, 134,  61,  95,  68, 126, 34, -11,
-            -6,   7,  26,  31,  65,  56, 25, -20,
-            -14,  13,   6,  21,  23,  12, 17, -23,
-            -27,  -2,  -5,  12,  17,   6, 10, -25,
-            -26,  -4,  -4, -10,   3,   3, 33, -12,
-            -35,  -1, -20, -23, -15,  24, 38, -22,
-            0,   0,   0,   0,   0,   0,  0,   0]
+        mg_pawn_table = [
+            0,   0,   0,   0,   0,   0,   0,   0,
+            5,  10,  15,  20,  20,  15,  10,   5,
+            4,   8,  12,  16,  16,  12,   8,   4,
+            3,   6,   9,  12,  12,   9,   6,   3,
+            2,   4,   6,   8,   8,   6,   4,   2,
+            1,   2,   3, -10, -10,   3,   2,   1,
+            0,   0,   0, -40, -40,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   0
+        ]
 
         eg_pawn_table = [
             0,   0,   0,   0,   0,   0,   0,   0,
-            178, 173, 158, 134, 147, 132, 165, 187,
-            94, 100,  85,  67,  56,  53,  82,  84,
-            32,  24,  13,   5,  -2,   4,  17,  17,
-            13,   9,  -3,  -7,  -7,  -8,   3,  -1,
-            4,   7,  -6,   1,   0,  -5,  -1,  -8,
-            13,   8,   8,  10,  13,   0,   2,  -7,
-            0,   0,   0,   0,   0,   0,   0,   0]
+            30,  40,  45,  50,  50,  45,  40,   30,
+            20,   18,  16,  16,  16,  16,   18,   20,
+            3,   6,   9,  12,  12,   9,   6,   3,
+            2,   4,   6,   8,   8,   6,   4,   2,
+            1,   2,   3, -10, -10,   3,   2,   1,
+            0,   0,   0, -40, -40,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   0
+        ]
 
         mg_knight_table = [
             -167, -89, -34, -49,  61, -97, -15, -107,
-            -73, -41,  72,  36,  23,  62,   7,  -17,
-            -47,  60,  37,  65,  84, 129,  73,   44,
-            -9,  17,  19,  53,  37,  69,  18,   22,
-            -13,   4,  16,  13,  28,  19,  21,   -8,
-            -23,  -9,  12,  10,  19,  17,  25,  -16,
+            -73, -41,  40,  36,  23,  40,   7,  -17,
+            -47,  31,  2,  4,  7, 6,  3,   3,
+            -9,  1,  2,  5,  3,  30,  1,   2,
+            -13,   2,  1,  3,  2,  1,  2,   -8,
+            -23,  -9,  1,  1,  1,  1,  25,  -16,
             -29, -53, -12,  -3,  -1,  18, -14,  -19,
             -105, -21, -58, -33, -17, -28, -19,  -23]
 
         eg_knight_table = [
             -58, -38, -13, -28, -31, -27, -63, -99,
             -25,  -8, -25,  -2,  -9, -25, -24, -52,
-            -24, -20,  10,   9,  -1,  -9, -19, -41,
-            -17,   3,  22,  22,  22,  11,   8, -18,
-            -18,  -6,  16,  25,  16,  17,   4, -18,
+            -24, -20,  10,   3,  -1,  -9, -19, -41,
+            -17,   -4,  2,  2,  2,  1,   8, -18,
+            -18,  -6,  1,  1,  1,  1,   1, -18,
             -23,  -3,  -1,  15,  10,  -3, -20, -22,
             -42, -20, -10,  -5,  -2, -20, -23, -44,
             -29, -51, -23, -15, -22, -18, -50, -64]
@@ -133,8 +138,8 @@ class Engine:
             -17, -20, -12, -27, -30, -25, -14, -36,
             -49,  -1, -27, -39, -46, -44, -33, -51,
             -14, -14, -22, -46, -44, -30, -15, -27,
-            1,   7,  -8, -64, -43, -16,   9,   8,
-            -15,  36,  12, -54,   8, -28,  24,  14]
+            1,   7,  -54, -64, -43, -40,   9,   8,
+            -15,  36,  -54, -54,   -54, -28,  24,  14]
 
         eg_king_table = [
             -74, -35, -18, -18, -11,  15,   4, -17,
@@ -145,6 +150,17 @@ class Engine:
             -19,  -3,  11,  21,  23,  16,   7,  -9,
             -27, -11,   4,  13,  14,   4,  -5, -17,
             -53, -34, -21, -11, -28, -14, -24, -43]
+
+        self.op_queen_table = [
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, -200, -200, -200, -200, -200,
+            -200, -200, -200, 200, -200, -200, -200, -200,
+        ]
 
         self.mg_table = {
             "p": mg_pawn_table,
@@ -181,6 +197,9 @@ class Engine:
             self.eval
             self.children = []
 
+    def get_color(self):
+        return self.color
+
     def lru_cache(maxsize=128, typed=False):
         def decorator(func):
             wraps(func)
@@ -200,27 +219,31 @@ class Engine:
             return decorator(func)
         return decorator
 
-    def get_color(self):
-        return self.color
-
     # Define your own evaluation function here
     # Input positions are a single string with characters represeting pieces (lowercase black, uppercase white)
     # ie. the starting position is represented
     # rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR
     def evaluate(self, position):
-        # YOUR CODE HERE
+        score = 0
+        #color = position.turn
+        #if position.has_castling_rights(color):
+        #    if color == chess.BLACK:
+        #        score -= 300
+        #    else:
+        #        score += 300
+
         if position.is_checkmate():
-            if self.color == "black":
-                return -10000
+            winner = position.outcome().winner
+            if winner:
+                return 100000
             else:
-                return 10000
+                return -100000
         
         if position.is_stalemate():    
             return 0
         
         fen = ''.join(str(position).split())
 
-        score = 0
         for i in range(0, len(fen)):
             piece = fen[i]
 
@@ -229,6 +252,24 @@ class Engine:
             # Piece square values
             if piece == ".":
                 score  += 0
+
+            elif piece == "q":
+                flip_index = self.flip[i]
+                if self.is_eg:
+                    score -= self.eg_table[piece][flip_index] 
+                elif self.is_op:
+                    score -= self.op_queen_table[flip_index] + 800
+                else:
+                    score -= self.mg_table[piece][flip_index]
+
+            elif piece == "Q":
+                piece = "q"
+                if self.is_eg:
+                    score += self.eg_table[piece][i]
+                elif self.is_op:
+                    score += self.op_queen_table[i] - 800
+                else:
+                    score += self.mg_table[piece][i]
 
             elif piece.isupper():
                 index = piece.lower()
@@ -240,10 +281,33 @@ class Engine:
                 index = piece
                 flip_index = self.flip[i]
                 if self.is_eg:
-                    score += self.eg_table[index][flip_index]
+                    score -= self.eg_table[index][flip_index]
                 else:
-                    score += self.mg_table[index][flip_index]
+                    score -= self.mg_table[index][flip_index]
+       
         return score
+
+
+    def check_op(self, board):
+        all_queens = True
+        white_queen = False
+        black_queen = False
+
+        fen = ''.join(str(board).split())
+        score = 0
+        for i in range(0, len(fen)):
+            piece = fen[i]
+            score += abs(self.values[piece])
+            if piece == 'q':
+                black_queen = True
+            if piece == "Q":
+                white_queen = True
+        
+        if not white_queen or not black_queen:
+            all_queens = False
+
+        if score/1000 < 24.5  or not all_queens:
+            self.is_op = False
 
     
     def check_eg(self, board):
@@ -261,35 +325,127 @@ class Engine:
             self.is_eg = True
 
 
-    # Returns a UCI move based on search and evaluation of position
-    # Position is a chess board
-    @lru_cache
-    def make_move(self, board):
-        # If move one, choose random move 
-        if board == chess.Board():
-            moves = list(board.legal_moves)
+    def openings(self, board):
+        moves = []
+
+        e4 = chess.Move.from_uci("e2e4")
+        e5 = chess.Move.from_uci("e7e5")
+        d4 = chess.Move.from_uci("d2d4")
+        d5 = chess.Move.from_uci("d7d5")
+        c4 = chess.Move.from_uci("c2c4")
+        c5 = chess.Move.from_uci("c7c5")
+        nf3 = chess.Move.from_uci("g1f3")
+        nc3 = chess.Move.from_uci("b1c3")
+
+
+        # If Move 1, choose an opening move 
+        position = chess.Board()
+        if board == position:
+            self.eval_value = 0
+            moves = [e4, d4, c4, chess.Move.from_uci("e2e3"),
+                     nf3, chess.Move.from_uci("g2g3")]
+
+        # Move 1 black
+        # if e4, choose one of the moves
+        position.push(e4)
+        if board == position:
+            moves = [e5, c5, chess.Move.from_uci("c7c6")]
+        position.pop()
+
+        # if d4, choose one of the moves
+        position.push(d4)   
+        if board == position:
+            moves = [d5, chess.Move.from_uci("g8f6")]
+        position.pop()
+
+        # if c4, choose one of the moves
+        position.push(c4) 
+        if board == position:
+            moves = [c5, e5, chess.Move.from_uci("e7e6")]
+        position.pop()
+
+        # Move 2 white
+        # e4 e5
+        position.push(e4)
+        position.push(e5)
+        if board == position:
+            moves = [nf3, nc3, chess.Move.from_uci("f1c4"), d4]
+        position.pop()
+        # e4 c5
+        position.push(c5)
+        if board == position:
+            moves = [d4, nf3, chess.Move.from_uci("c2c3"), nc3]
+        position.pop()
+        position.pop()
+        # d4 d5
+        position.push(d4)
+        position.push(d5)
+        if board == position:
+            moves = [chess.Move.from_uci("g2g3"), nf3, c4, chess.Move.from_uci("c1f4")]
+        position.pop()
+        position.pop()
+
+        # c4 c5
+        position.push(c4)
+        position.push(c5)
+        if board == position:
+            moves = [chess.Move.from_uci("e2e3"), nf3, e4, nc3]
+        position.pop()
+        # c4 e5
+        position.push(e5)
+        if board == position:
+            moves = [chess.Move.from_uci("g2g3"), nf3, chess.Move.from_uci("e2e3"), nc3]
+
+        if moves == []:
+            self.opening_prep = False
+            return moves, 0
+
+        else:
             return moves[random.randint(0, len(moves)-1)], 0
 
-        # if e4, choose one of the moves   
 
+    # Returns a UCI move based on search and evaluation of position
+    # Position is a chess board
+    def make_move(self, board):
+        move, eval = self.openings(board)
+        if self.opening_prep:
+            self.eval_value = eval
+            return move, eval
+
+        self.check_op(board)
         self.check_eg(board)
         move = self.make_move_helper(board, depth=self.depth)
-        #print("Current evaluation is: " + str((self.eval_value + 300)/100))
 
-        if self.color == "white":
-            self.eval_value = (self.eval_value + 300)/100 - .5
+        #print(self.eval_value)
+        if board.turn == chess.WHITE:
+            self.eval_value = (self.eval_value+1700)/250
         else:
-            self.eval_value = (self.eval_value + 300)/100 + .5
+            self.eval_value = (self.eval_value+1700)/250 - 1
+
+        board.push(move)
+        if board.can_claim_draw():
+            board.pop()
+            if self.color == "white" and self.eval_value > 0.5:
+                return self.next_best_move(move, board, 3), self.eval_value
+            
+            elif self.color == "black" and self.eval_value < -0.5:
+                return self.next_best_move(move, board, 3), self.eval_value
+            
+            else:
+                self.eval_value = 0
+                return move, 0
+
+        else:
+            board.pop()
 
         return move, self.eval_value
 
-    @lru_cache
     def make_move_helper(self, board, depth):
         is_white = False
-        if self.color == "white":
+        if board.turn == chess.WHITE:
             is_white = True
 
-        best_move = -100000 if is_white else 100000
+        best_move = -10000000000 if is_white else 100000000000
         best_final = None
         moves = list(board.legal_moves)
         move_val_estimates = []
@@ -316,14 +472,41 @@ class Engine:
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
         if depth <= 0 or board.is_game_over():
             return self.evaluate(board)
+        
+        is_white = False
+        if board.turn == chess.WHITE:
+            is_white = True
 
         if is_maximizing:
             best_move = -100000
             moves = list(board.legal_moves)
-            random.shuffle(moves)
+            move_val_estimates = []
             for move in moves:
+
                 board.push(move)
-                value = self.minimax_helper(depth - 1, board, alpha, beta, False)
+                #fen = ''.join(str(board).split())
+
+                move_val_estimates.append(self.evaluate(board))
+                board.pop()
+        
+            moves = [x for _, x in sorted(zip(move_val_estimates, moves), key=lambda pair: pair[0])]
+            moves.reverse()
+            
+            for move in moves:
+                #is_castling = False
+                #if board.is_castling(move):
+                #    is_castling = True
+
+                board.push(move)
+                value = self.minimax_helper(depth - 1, board, alpha, beta, is_white)
+                #if is_castling:
+                #    if board.turn == chess.BLACK:
+                #        value += 300
+                #    else:
+                #        value -= 300
+                #if self.is_op and :
+
+
                 board.pop()
                 best_move = max(best_move, value)
                 alpha = max(alpha, best_move)
@@ -333,12 +516,61 @@ class Engine:
         
         else:
             best_move = 100000
-            for move in board.legal_moves:
+
+            moves = list(board.legal_moves)
+            move_val_estimates = []
+            for move in moves:
                 board.push(move)
-                value = self.minimax_helper(depth - 1, board, alpha, beta, True)
+                move_val_estimates.append(self.evaluate(board))
+                board.pop()
+        
+            moves = [x for _, x in sorted(zip(move_val_estimates, moves), key=lambda pair: pair[0])]
+
+            for move in moves:
+                #is_castling = False
+                #if board.is_castling(move):
+                #    is_castling = True
+
+                board.push(move)
+                value = self.minimax_helper(depth - 1, board, alpha, beta, is_white)
+                #if is_castling:
+                #    if board.turn == chess.BLACK:
+                #        value += 300
+                #    else:
+                #        value -= 300
                 board.pop()
                 best_move = min(best_move, value)
                 beta = min(beta, best_move)
                 if beta <= alpha:
                     break
             return best_move
+        
+    def next_best_move(self, draw_move, board, depth):
+        is_white = False
+        if board.turn == chess.WHITE:
+            is_white = True
+
+        best_move = -10000000000 if is_white else 100000000000
+        best_final = None
+        moves = list(board.legal_moves)
+        move_val_estimates = []
+        for move in moves:
+            board.push(move)
+            move_val_estimates.append(self.evaluate(board))
+            board.pop()
+        
+        moves = [x for _, x in sorted(zip(move_val_estimates, moves), key=lambda pair: pair[0])]
+        moves.reverse()
+
+        for move in moves:
+            if draw_move == move:
+                continue
+            board.push(move)
+            value = self.minimax_helper(depth - 1, board, -10000, 10000, not is_white)
+            board.pop()
+            if (is_white and value > best_move) or (not is_white and value < best_move):
+                best_move = value
+                best_final = move
+
+        self.eval_value = best_move
+        return best_final

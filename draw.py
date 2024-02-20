@@ -176,6 +176,12 @@ class Render:
         if eval == None:
             eval = self.eval
 
+        self.game.get_board_raw().push(move)
+        pos = self.game.get_board_raw()
+        if pos.can_claim_draw():    
+            self.eval = 0
+        pos.pop()
+
         self.game.make_move_uci(move, print_move)
 
         if self.turn == "white":
@@ -194,6 +200,12 @@ class Render:
         move, eval = self.engine_sim.make_move(game_state)
         if eval == None:
             eval = self.eval
+
+        self.game.get_board_raw().push(move)
+        pos = self.game.get_board_raw()
+        if pos.can_claim_draw():    
+            self.eval = 0
+        pos.pop()
 
         self.game.make_move_uci(move, False)
 
@@ -260,6 +272,8 @@ class Render:
                     else:
                         self.eval = self.handle_black_engine_move()
 
+                    if self.game.get_board_raw().is_game_over():
+                        self.game_over = True
                 else:
                     running = False        
 
@@ -277,5 +291,9 @@ class Render:
             pygame.display.flip()
 
             self.clock.tick(240)  # limits FPS to 60
+
+
+            if self.game.get_board_raw().is_game_over():
+                return self.game.get_outcome()
         
         return self.game.get_outcome()

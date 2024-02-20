@@ -6,7 +6,6 @@ sys.path.insert(1, './engines')
 import materialistic_engine
 import minimax
 
-
 def main():
     pygame.init()
     pygame.font.init()
