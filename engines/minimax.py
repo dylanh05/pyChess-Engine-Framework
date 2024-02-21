@@ -87,7 +87,6 @@ class Engine:
     # rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR
     def evaluate(self, position):
         score = 0
-
         if position.is_checkmate():
             winner = position.outcome().winner
             if winner:
@@ -99,10 +98,8 @@ class Engine:
             return 0
         
         fen = ''.join(str(position).split())
-
         for i in range(0, len(fen)):
             piece = fen[i]
-
             # Material values
             score += self.values[piece]
             # Piece square values
@@ -140,7 +137,7 @@ class Engine:
                     score -= self.eg_table[index][flip_index]
                 else:
                     score -= self.mg_table[index][flip_index]
-       
+
             score += random.randint(-10, 10)
         return score
 
@@ -199,7 +196,6 @@ class Engine:
             self.is_eg = True
 
 
-
     def openings(self, board):
         moves = []
         moves = self.check_and_make_opening_move(board)
@@ -224,9 +220,7 @@ class Engine:
             return move, eval
 
         self.check_game_phase(board)
-        
         move = self.make_move_helper(board, depth=self.depth)
-
         self.eval_value_adjust(board)
 
         board.push(move)
@@ -241,12 +235,11 @@ class Engine:
             else:
                 self.eval_value = 0
                 return move, 0
-
         else:
             board.pop()
-
         #print("Time to make move: " + str(time.time()-start_time))
         return move, self.eval_value
+
 
     def make_move_helper(self, board, depth):
         is_white = False
@@ -277,6 +270,7 @@ class Engine:
 
         self.eval_value = best_move
         return best_final
+
 
     @lru_cache
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
@@ -316,6 +310,7 @@ class Engine:
                 if beta <= alpha:
                     break
             return best_move
+        
         
     def next_best_move(self, draw_move, board, depth):
         is_white = False
