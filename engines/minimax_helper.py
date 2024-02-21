@@ -1,21 +1,3 @@
-import chess
-
-e4 = chess.Move.from_uci("e2e4")
-e5 = chess.Move.from_uci("e7e5")
-e6 = chess.Move.from_uci("e7e6")
-d4 = chess.Move.from_uci("d2d4")
-d5 = chess.Move.from_uci("d7d5")
-c4 = chess.Move.from_uci("c2c4")
-c5 = chess.Move.from_uci("c7c5")
-nf3 = chess.Move.from_uci("g1f3")
-nc3 = chess.Move.from_uci("b1c3")
-f4 = chess.Move.from_uci("f2f4")
-e3 = chess.Move.from_uci("e2e3")
-g3 = chess.Move.from_uci("g2g3")
-nf6 = chess.Move.from_uci("g8f6")
-nc6 = chess.Move.from_uci("b8c6")
-c6 = chess.Move.from_uci("c7c6")
-
 class Minimax_Helper:
     def __init__(self):
         self.values = {
@@ -33,49 +15,6 @@ class Minimax_Helper:
             "K": 9000,
             ".": 0,
         }     
-
-        self.opening_positions = {
-            "move_1_white": {
-                tuple([]): [e4, d4, c4, f4, nf3, g3],
-            },
-            "move_1_black": {
-                tuple([e4]) : [e5, c5, c6],
-                tuple([d4]) : [d5, chess.Move.from_uci("g8f6")],
-                tuple([c4]) : [c5, e5, chess.Move.from_uci("e7e6")],
-                tuple([g3]) : [c5, d5, e5],
-                tuple([nf3]) : [c5, d5, c6, 
-                                chess.Move.from_uci("e7e6"), chess.Move.from_uci("g8f6")],
-            },
-            "move_2_white": {
-                tuple([e4,e5]) : [nf3, nc3, chess.Move.from_uci("f1c4"), d4, f4],
-                tuple([e4, c6]) : [d4, c4, nc3, nf3],
-                tuple([e4, c5]) : [d4, nf3, chess.Move.from_uci("c2c3"), nc3],
-                tuple([d4, d5]) : [g3, nf3, c4, chess.Move.from_uci("c1f4")],
-                tuple([c4, c5]) : [e3, nf3, e4, nc3],
-                tuple([c4, e5]) : [chess.Move.from_uci("g2g3"), nf3, chess.Move.from_uci("e2e3"), nc3],
-            },
-            "move_2_black": {
-                tuple([e4, e5, nf3]) : [chess.Move.from_uci("b8c6"), chess.Move.from_uci("g8f6"),
-                                        chess.Move.from_uci("d7d6")],
-                tuple([e4, e5, nc3]) : [chess.Move.from_uci("b8c6"), chess.Move.from_uci("g8f6"),
-                                        chess.Move.from_uci("d7d6"), chess.Move.from_uci("f8b4"), chess.Move.from_uci("f8c5")],
-                tuple([e4, e5, d4]) : [chess.Move.from_uci("e5d4")],
-
-                tuple([e4, c6, d4]) : [d5, e6],
-                tuple([e4, c6, c4]) : [d5],
-                tuple([e4, c6, nc3]) : [d5, e5, e6],
-                tuple([e4, c6, nf3]) : [d5, e6],
-
-                tuple([e4, c5, d4]) : [chess.Move.from_uci("c5d4")],
-                tuple([e4, c5, nf3]) : [chess.Move.from_uci("d7d6"), e6, nf6, nc6],
-                tuple([e4, c5, nc3]) : [e6, nc6, chess.Move.from_uci("d7d6")],
-
-                tuple([d4, d5, g3]) : [c6],
-                tuple([d4, d5, nf3]) : [c6, e6, nf6, chess.Move.from_uci("c8f5")],
-                tuple([d4, d5, c4]) : [c6, e6, chess.Move.from_uci("d5c4"), c5],
-
-            },
-        }
 
         mg_pawn_table = [
             0,   0,   0,   0,   0,   0,   0,   0,
@@ -231,9 +170,6 @@ class Minimax_Helper:
 
     def get_piece_values(self):
         return self.values
-    
-    def get_openings(self):
-        return self.opening_positions
     
     def get_mg_table(self):
         return self.mg_table

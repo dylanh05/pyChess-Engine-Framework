@@ -3,10 +3,11 @@ sys.path.insert(1, './engines')
 
 import random
 import chess
+import chess.polyglot
 import minimax_helper
 from functools import wraps, lru_cache
 import weakref
-#import time
+import time
 
 class Engine:
     def __init__(self, color):
@@ -16,10 +17,10 @@ class Engine:
         self.is_eg = False
         self.is_op = True
         self.eval_value = 0
+        self.sleep = False
 
         helper = minimax_helper.Minimax_Helper()
         self.values = helper.get_piece_values()
-        self.opening_positions = helper.get_openings()
         self.mg_table = helper.get_mg_table()
         self.eg_table = helper.get_eg_table()
         self.op_queen_table = helper.get_op_queen_table()
@@ -141,31 +142,12 @@ class Engine:
             score += random.randint(-10, 10)
         return score
 
-
     def check_and_make_opening_move(self, board):
-        start_pos = chess.Board()
-
-        for opening_pos in self.opening_positions:
-            for moves in self.opening_positions[opening_pos]:
-                if board == chess.Board():
-                    if moves == tuple([]):
-                        return self.opening_positions[opening_pos][moves]
-                
-                else:
-                    n_moves = len(moves)
-
-                    for move in moves:
-                        start_pos.push(move)
-
-                    if board == start_pos:
-                        return self.opening_positions[opening_pos][moves]
-                    
-                    for _ in range(0, n_moves):
-                        start_pos.pop()
-
-        self.opening_prep = False
-        return moves    
-
+        with chess.polyglot.open_reader("./openings/baron30.bin") as reader:
+            entries = []
+            for entry in reader.find_all(board):
+                entries.append(entry.move)
+        return entries
 
     def check_game_phase(self, board):
         all_queens = True
@@ -202,10 +184,12 @@ class Engine:
 
         if moves == []:
             self.opening_prep = False
-            return moves, 0
+            return moves, 0.3
 
         else:
             index = random.randint(0, len(moves)-1)
+            if self.sleep:
+                time.sleep(1)
             return moves[index], 0.3
 
 
@@ -216,6 +200,9 @@ class Engine:
         if self.opening_prep:
             move, eval = self.openings(board)
             self.eval_value = eval
+
+            if not self.sleep:
+                self.sleep = True
             #print("Time to make move: " + str(time.time()-start_time))
             return move, eval
 
