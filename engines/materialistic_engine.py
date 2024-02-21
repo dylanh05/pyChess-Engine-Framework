@@ -24,7 +24,6 @@ class Engine:
     def get_color(self):
         return self.color
 
-
     # Define your own evaluation function here
     # Input positions are a single string with characters representing pieces (lowercase black, uppercase white)
     # ie. the starting position is represented

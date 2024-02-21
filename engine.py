@@ -10,11 +10,7 @@ class Engine:
 
 
     # Define your own evaluation function here
-    # Input positions are a single string with characters representing pieces (lowercase black, uppercase white)
-    # ie. the starting position is represented
-    # rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR
-
-    # ACTUALLY RN INPUT POSITIONS ARE chess.board objects!!!!   
+    # Input positions are chess.Board() objects
     def evaluate(self, position):
         # YOUR CODE HERE
 
@@ -28,7 +24,7 @@ class Engine:
     
 
     # Returns a UCI move based on search and evaluation of position
-    # Position is a chess board
+    # Position is a chess.Board() object
     def make_move(self, position):
         # YOUR CODE HERE
 

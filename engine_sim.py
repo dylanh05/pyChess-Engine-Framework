@@ -21,6 +21,7 @@ def main():
         # Choose which engine plays w white and black
         white_engine = minimax.Engine("white")
         black_engine = minimax.Engine("black")
+
         render = draw.Render(white_engine, black_engine)
         outcome = render.draw_screen()
         if outcome == True:

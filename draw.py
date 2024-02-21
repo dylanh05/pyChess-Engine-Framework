@@ -7,9 +7,9 @@ class Render:
         self.draw_eval_bar = True
         self.cell_size = 80
         self.eval_bar_thkness = 40
-        self.black_sq_color = (210, 180, 140)
-        self.white_sq_color = (252, 248, 220)
-        self.highlight_color = (255,255,153)
+        self.black_sq_color =  (128,0,128)#(210, 180, 140)
+        self.white_sq_color = (216,191,216)#(252, 248, 220)
+        self.highlight_color = (255,0,255)#(255,255,153)
         self.eval_bar_white_col = (255, 255, 255)
         self.eval_bar_black_col = (0, 0, 0)
 
@@ -298,8 +298,6 @@ class Render:
             pygame.display.flip()
 
             self.clock.tick(240)  # limits FPS to 60
-
-
             if self.game.get_board_raw().is_game_over():
                 return self.game.get_outcome()
         
