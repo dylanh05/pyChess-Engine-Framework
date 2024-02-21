@@ -12,7 +12,7 @@
 - Opening database to play book moves for the first two turns.
 - Evaluation function with piece square tables to encourage strategic piece placement. Piece square tables change based on phase of the game.
 - Alpha-beta pruning optimization.
-- Move ordering to search high value captures first when depth >= 4.
+- Move ordering to search high value captures first when depth >= 3.
 
 ## How to use
 ### Run a game
