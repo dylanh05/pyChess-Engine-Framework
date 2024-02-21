@@ -17,6 +17,7 @@ class Engine:
         self.is_eg = False
         self.is_op = True
         self.eval_value = 0
+        self.opening_path = "./openings/Human.bin"
         self.sleep = False
 
         helper = minimax_helper.Minimax_Helper()
@@ -143,7 +144,7 @@ class Engine:
         return score
 
     def check_and_make_opening_move(self, board):
-        with chess.polyglot.open_reader("./openings/baron30.bin") as reader:
+        with chess.polyglot.open_reader(self.opening_path) as reader:
             entries = []
             for entry in reader.find_all(board):
                 entries.append(entry.move)
