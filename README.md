@@ -42,5 +42,5 @@ Real time example of minimax with depth 3 playing itself:
 </p>
 Real time example of user playing against minimax with depth 3:
 <p align="center">
-<img src = 'https://github.com/dylanh05/pyChess-Engine-Framework/blob/main/python-chess-engine.gif' alt="animated">
+<img src = 'https://github.com/dylanh05/pyChess-Engine-Framework/blob/main/python-chess-engine-player.gif' alt="animated">
 </p>
