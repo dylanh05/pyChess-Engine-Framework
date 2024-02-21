@@ -1,4 +1,4 @@
-Python Chess Engine Building Framework
+#Python Chess Engine Building Framework
 
 Make a copy of engine.py and fill in the functions as directed by the comments
 Then, import into main.py or engine_sim.py
