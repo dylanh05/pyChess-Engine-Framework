@@ -12,11 +12,11 @@ def main():
     pygame.init()
     pygame.font.init()
 
+    n_games = 10
+
     white_wins = 0
     black_wins = 0
     draws = 0
-    n_games = 500
-
     for _ in range(0, n_games):
         # Choose which engine plays w white and black
         white_engine = minimax.Engine("white")

@@ -10,7 +10,7 @@ import weakref
 
 class Engine:
     def __init__(self, color):
-        self.depth = 2
+        self.depth = 3
         self.opening_prep = True
         self.color = color
         self.is_eg = False
@@ -311,7 +311,7 @@ class Engine:
                     break
             return best_move
         
-        
+
     def next_best_move(self, draw_move, board, depth):
         is_white = False
         if board.turn == chess.WHITE:
