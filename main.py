@@ -4,6 +4,7 @@ import engine
 import sys
 sys.path.insert(1, './engines')
 import materialistic_engine
+import minimax_quiescence
 import minimax
 import aggy_king
 

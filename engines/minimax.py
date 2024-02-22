@@ -17,7 +17,7 @@ class Engine:
         self.is_op = True
         self.eval_value = 0
         self.opening_prep = True
-        self.opening_path = "./openings/Human.bin"
+        self.opening_path = "./openings/baron30.bin"
         self.sleep = False
 
         helper = minimax_helper.Minimax_Helper()
@@ -215,10 +215,10 @@ class Engine:
         if board.can_claim_draw():
             board.pop()
             if self.color == "white" and self.eval_value > 0.5:
-                return self.next_best_move(move, board, 3), self.eval_value
+                return self.next_best_move(move, board, self.depth), self.eval_value
             
             elif self.color == "black" and self.eval_value < -0.5:
-                return self.next_best_move(move, board, 3), self.eval_value
+                return self.next_best_move(move, board, self.depth), self.eval_value
             
             else:
                 self.eval_value = 0

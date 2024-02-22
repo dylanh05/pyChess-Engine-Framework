@@ -17,7 +17,7 @@ class Engine:
         self.is_op = True
         self.eval_value = 0
         self.opening_prep = True
-        self.opening_path = "./openings/Human.bin"
+        self.opening_path = "./openings/baron30.bin"
         self.sleep = False
 
         helper = minimax_helper.Minimax_Helper()
@@ -25,7 +25,7 @@ class Engine:
         self.mg_table = helper.get_mg_table()
         self.eg_table = helper.get_eg_table()
         self.op_queen_table = helper.get_op_queen_table()
-        self.quiescence_max_depth = 3
+        self.quiescence_max_depth = 2
         
         self.flip = [
             56,  57,  58,  59,  60,  61,  62,  63,
@@ -346,13 +346,12 @@ class Engine:
         return True
 
 
-    def quiescence_search(self, board, depth, max_node: bool, alpha, beta):
+    def quiescence_search(self, board, depth, max_node, alpha, beta):
         if board.is_game_over() or depth >= self.quiescence_max_depth:
             return self.evaluate(board)
         
         non_quiescent_actions = [move for move in board.legal_moves if board.is_capture(move)]
         if not non_quiescent_actions:
-            # There are no non-quiescent actions available, so we are in a quiet state
             return self.evaluate(board)
 
         elif max_node:
@@ -364,7 +363,7 @@ class Engine:
                 alpha = stand_pat
 
             for action in non_quiescent_actions:
-                board.push(action)  # now its the child of the state above
+                board.push(action)
                 value = self.quiescence_search(board, depth + 1, False, alpha, beta)
                 board.pop()
                 best_val = max(best_val, value)
