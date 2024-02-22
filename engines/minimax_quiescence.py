@@ -25,6 +25,7 @@ class Engine:
         self.mg_table = helper.get_mg_table()
         self.eg_table = helper.get_eg_table()
         self.op_queen_table = helper.get_op_queen_table()
+        self.quiescence_max_depth = 3
         
         self.flip = [
             56,  57,  58,  59,  60,  61,  62,  63,
@@ -263,7 +264,14 @@ class Engine:
     @lru_cache
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
         if depth <= 0 or board.is_game_over():
-            return self.evaluate(board)
+            #return self.evaluate(board)
+            if self.is_quiet_position(board):
+                return self.evaluate(board)
+            else:
+                maximizing = False
+                if board.turn == chess.WHITE:
+                    maximizing = True
+                return self.quiescence_search(board, 0, maximizing, -10000000000, 1000000000)
 
         moves = list(board.legal_moves)
         if depth >= 4:
@@ -329,3 +337,56 @@ class Engine:
 
         self.eval_value = best_move
         return best_final
+    
+
+    def is_quiet_position(self, board):
+        for move in board.legal_moves:
+            if board.is_capture(move):
+                return False
+        return True
+
+
+    def quiescence_search(self, board, depth, max_node: bool, alpha, beta):
+        if board.is_game_over() or depth >= self.quiescence_max_depth:
+            return self.evaluate(board)
+        
+        non_quiescent_actions = [move for move in board.legal_moves if board.is_capture(move)]
+        if not non_quiescent_actions:
+            # There are no non-quiescent actions available, so we are in a quiet state
+            return self.evaluate(board)
+
+        elif max_node:
+            best_val = -10000000000
+            stand_pat = self.evaluate(board)
+            if stand_pat >= beta:
+                return stand_pat
+            if alpha < stand_pat:
+                alpha = stand_pat
+
+            for action in non_quiescent_actions:
+                board.push(action)  # now its the child of the state above
+                value = self.quiescence_search(board, depth + 1, False, alpha, beta)
+                board.pop()
+                best_val = max(best_val, value)
+                if best_val >= beta:
+                    return best_val
+                alpha = max(best_val, alpha)
+            return best_val
+
+        else:
+            stand_pat = self.evaluate(board)
+            if stand_pat <= alpha:
+                return stand_pat
+            if stand_pat < beta:
+                beta = stand_pat
+
+            best_val = 10000000000
+            for action in non_quiescent_actions:
+                board.push(action)  # now its the child of the state above
+                value = self.quiescence_search(board, depth + 1, True, alpha, beta)
+                board.pop() # now its the same as the above parameter passed again
+                best_val = min(best_val, value)
+                if best_val <= alpha:
+                    return best_val
+                beta = min(best_val, beta)
+            return best_val

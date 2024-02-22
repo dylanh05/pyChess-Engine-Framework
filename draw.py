@@ -50,6 +50,8 @@ class Render:
         self.engine = engine
         self.engine_sim = engine_for_sim
 
+        pygame.display.set_caption("pyChess Engine Framework")
+
 
     def draw_board(self):
         board = pygame.Surface((self.cell_size * 8, self.cell_size * 8))
