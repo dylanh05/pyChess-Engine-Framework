@@ -16,7 +16,8 @@ class Engine:
         self.is_eg = False
         self.is_op = True
         self.eval_value = 0
-        self.opening_prep = True
+        self.num_exceptions = 0
+        self.opening_prep = False
         self.opening_path = "./openings/baron30.bin"
         self.sleep = False
 
@@ -25,7 +26,7 @@ class Engine:
         self.mg_table = helper.get_mg_table()
         self.eg_table = helper.get_eg_table()
         self.op_queen_table = helper.get_op_queen_table()
-        self.quiescence_max_depth = 2
+        self.quiescence_max_depth = 4
 
         self.flip = [
             56,  57,  58,  59,  60,  61,  62,  63,
@@ -143,6 +144,9 @@ class Engine:
                     score -= self.mg_table[index][flip_index]
 
             score += random.randint(-10, 10)
+
+            #if self.is_eg:
+            #    chess.square_distance(chess.square())
         return score
 
     def check_and_make_opening_move(self, board):
@@ -178,7 +182,7 @@ class Engine:
 
         # If in eg, deepen the search by 1
         if score/100 < 30 and not self.is_eg:
-            self.depth = self.depth + 1
+            #self.depth = self.depth + 1
             self.is_eg = True
 
 
@@ -193,7 +197,7 @@ class Engine:
         else:
             index = random.randint(0, len(moves)-1)
             if self.sleep:
-                time.sleep(1)
+                time.sleep(0.001)
             return moves[index], 0.3
 
 
@@ -232,7 +236,8 @@ class Engine:
             return move, eval
 
         self.check_game_phase(board)
-        move = self.make_move_helper(board, depth=self.depth)
+        for i in range(1, self.depth):
+            move = self.make_move_helper(board, i)
         self.eval_value_adjust(board)
 
         board.push(move)
@@ -274,9 +279,19 @@ class Engine:
         self.eval_value = best_move
         return best_final
 
-
     @lru_cache
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
+        best_move = 100000000000
+        if is_maximizing:
+            best_move = -1000000000000
+        if self.calc_extension(board) == 1:
+            for move in list(board.legal_moves):
+                board.push(move)
+                value = self.minimax_helper(depth, board, alpha, beta, False)
+                board.pop()
+                best_move = max(best_move, value)
+            return best_move
+
         if depth <= 0 or board.is_game_over():
             #return self.evaluate(board)
             if self.is_quiet_position(board):
@@ -286,7 +301,7 @@ class Engine:
                 is_white = False
                 if board.turn == chess.WHITE:
                     is_white = True
-                return self.quiescence_search(board, 0, is_white, -10000000000, 1000000000)
+                return self.quiesce(board, 0, is_white, -10000000000, 1000000000)
 
         moves = list(board.legal_moves)
         if depth >= 4:
@@ -316,6 +331,14 @@ class Engine:
                     break
             return best_move
         
+    def calc_extension(self, board):
+        extension = 0
+        if self.num_exceptions < 5:
+            if board.is_check():
+                extension = 1
+                self.num_exceptions += 1
+
+        return extension
 
     def next_best_move(self, draw_move, board, depth):
         is_white = False
@@ -345,8 +368,14 @@ class Engine:
             if board.is_capture(move):
                 return False
         return True
+    
+    @lru_cache
+    def quiesce(self, board, depth, max_node, alpha, beta):
+        best_val = -1000000000
+        best_val = self.quiescence_search(board, 0, max_node, alpha, beta)
+        return best_val
 
-
+    @lru_cache
     def quiescence_search(self, board, depth, max_node, alpha, beta):
         if board.is_game_over() or depth >= self.quiescence_max_depth:
             return self.evaluate(board)
@@ -366,7 +395,7 @@ class Engine:
             best_val = -10000000000
             stand_pat = self.evaluate(board)
 
-            delta = 900
+            delta = 800
             if stand_pat < alpha - delta:
                 return alpha
             
@@ -388,11 +417,10 @@ class Engine:
         else:
             stand_pat = self.evaluate(board)
 
-            delta = -900
+            delta = 800
             if stand_pat < alpha - delta:
                 return alpha
             
-
             if stand_pat <= alpha:
                 return stand_pat
             if stand_pat < beta:

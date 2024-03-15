@@ -11,7 +11,7 @@ import time
 
 class Engine:
     def __init__(self, color):
-        self.depth = 3
+        self.depth = 4
         self.color = color
         self.is_eg = False
         self.is_op = True
@@ -25,7 +25,11 @@ class Engine:
         self.mg_table = helper.get_mg_table()
         self.eg_table = helper.get_eg_table()
         self.op_queen_table = helper.get_op_queen_table()
-        self.quiescence_max_depth = 2
+        self.ztable = [[[random.randint(1,2**64 - 1) for i in range(12)]for j in range(8)]for k in range(8)]
+        
+        self.cached_positions = {
+            str(chess.Board()): 0,
+        }
 
         self.flip = [
             56,  57,  58,  59,  60,  61,  62,  63,
@@ -44,6 +48,42 @@ class Engine:
             self.eval
             self.children = []
 
+    def indexing(self, piece):
+        ''' mapping each piece to a particular number'''
+        if piece=='P':
+            return 0
+        if piece=='N':
+            return 1
+        if piece=='B':
+            return 2
+        if piece=='R':
+            return 3
+        if piece=='Q':
+            return 4
+        if piece=='K':
+            return 5
+        if piece=='p':
+            return 6
+        if piece=='n':
+            return 7
+        if piece=='b':
+            return 8
+        if piece=='r':
+            return 9
+        if piece=='q':
+            return 10
+        if piece=='k':
+            return 11
+
+    def compute_hash(self, board):
+        board = "".join(str(board).split())
+        h = 0
+        for i in range(8):
+            for j in range(8):
+                if board[i+8*j] != '.':
+                    piece = self.indexing(board[i+8*j])
+                    h ^= self.ztable[i][j][piece]
+        return h
 
     def get_color(self):
         return self.color
@@ -193,17 +233,12 @@ class Engine:
         else:
             index = random.randint(0, len(moves)-1)
             if self.sleep:
-                time.sleep(1)
+                time.sleep(0.001)
             return moves[index], 0.3
 
 
-    def sort_move_by_eval(self, board, quiescence):
-        moves = []
-        if not quiescence:
-            moves = list(board.legal_moves)
-
-        else:
-            moves = [move for move in board.legal_moves if board.is_capture(move) or board.gives_check(move)]
+    def sort_move_by_eval(self, board):
+        moves = list(board.legal_moves)
 
         move_val_estimates = []
         for move in moves:
@@ -228,11 +263,12 @@ class Engine:
 
             if not self.sleep:
                 self.sleep = True
-            print("Time to make move for minimax w q search: " + str(time.time()-start_time))
+            print("Time to make move for minimax w hash search: " + str(time.time()-start_time))
             return move, eval
 
         self.check_game_phase(board)
-        move = self.make_move_helper(board, depth=self.depth)
+        for i in range(1, self.depth):
+            move = self.make_move_helper(board, i)
         self.eval_value_adjust(board)
 
         board.push(move)
@@ -249,7 +285,7 @@ class Engine:
                 return move, 0
         else:
             board.pop()
-        print("Time to make move for minimax w q search: " + str(time.time()-start_time))
+        print("Time to make move for minimax w hash search: " + str(time.time()-start_time))
         return move, self.eval_value
 
 
@@ -261,36 +297,37 @@ class Engine:
         best_move = -10000000000 if is_white else 100000000000
         best_final = None
 
-        moves = self.sort_move_by_eval(board, False)
+        moves = self.sort_move_by_eval(board)
 
         for move in moves:
             board.push(move)
             value = self.minimax_helper(depth - 1, board, -10000000000, 1000000000, not is_white)
+            if depth == self.depth:
+                hash = self.compute_hash(board)
+                self.cached_positions[hash] = value
             board.pop()
             if (is_white and value > best_move) or (not is_white and value < best_move):
                 best_move = value
                 best_final = move
-
+        
         self.eval_value = best_move
         return best_final
 
 
     @lru_cache
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
-        if depth <= 0 or board.is_game_over():
-            #return self.evaluate(board)
-            if self.is_quiet_position(board):
-                return self.evaluate(board)
-                
-            else:
-                is_white = False
-                if board.turn == chess.WHITE:
-                    is_white = True
-                return self.quiescence_search(board, 0, is_white, -10000000000, 1000000000)
+        
+        hash = self.compute_hash(board)
 
+        if hash in self.cached_positions:
+            return self.cached_positions[hash]
+
+        if depth <= 0 or board.is_game_over():
+            return self.evaluate(board)
+  
         moves = list(board.legal_moves)
         if depth >= 4:
-            moves = self.sort_move_by_eval(board, False)
+            moves = self.sort_move_by_eval(board)
 
         if is_maximizing:
             best_move = -10000000
@@ -324,7 +361,7 @@ class Engine:
 
         best_move = -10000000000 if is_white else 100000000000
         best_final = None
-        moves = self.sort_move_by_eval(board, False)
+        moves = self.sort_move_by_eval(board)
 
         for move in moves:
             if draw_move == move:
@@ -338,73 +375,3 @@ class Engine:
 
         self.eval_value = best_move
         return best_final
-    
-
-    def is_quiet_position(self, board):
-        for move in board.legal_moves:
-            if board.is_capture(move):
-                return False
-        return True
-
-
-    def quiescence_search(self, board, depth, max_node, alpha, beta):
-        if board.is_game_over() or depth >= self.quiescence_max_depth:
-            return self.evaluate(board)
-        
-        moves = []
-
-        if depth == 0:
-            moves = self.sort_move_by_eval(board, True)
-
-        else:
-            moves = [move for move in board.legal_moves if board.is_capture(move) or board.gives_check(move)]
-
-        if len(moves) == 0:
-            return self.evaluate(board)
-
-        elif max_node:
-            best_val = -10000000000
-            stand_pat = self.evaluate(board)
-
-            delta = 900
-            if stand_pat < alpha - delta:
-                return alpha
-            
-            if stand_pat >= beta:
-                return stand_pat
-            if alpha < stand_pat:
-                alpha = stand_pat
-
-            for action in moves:
-                board.push(action)
-                value = self.quiescence_search(board, depth + 1, False, alpha, beta)
-                board.pop()
-                best_val = max(best_val, value)
-                if best_val >= beta:
-                    return best_val
-                alpha = max(best_val, alpha)
-            return best_val
-
-        else:
-            stand_pat = self.evaluate(board)
-
-            delta = -900
-            if stand_pat < alpha - delta:
-                return alpha
-            
-
-            if stand_pat <= alpha:
-                return stand_pat
-            if stand_pat < beta:
-                beta = stand_pat
-
-            best_val = 10000000000
-            for action in moves:
-                board.push(action)
-                value = self.quiescence_search(board, depth + 1, True, alpha, beta)
-                board.pop()
-                best_val = min(best_val, value)
-                if best_val <= alpha:
-                    return best_val
-                beta = min(best_val, beta)
-            return best_val
