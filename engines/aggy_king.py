@@ -441,11 +441,11 @@ class Engine:
     # Returns a UCI move based on search and evaluation of position
     # Position is a chess board
     def make_move(self, board):
-        start_time = time.time()
+        #start_time = time.time()
         if self.opening_prep:
             move, eval = self.openings(board)
             self.eval_value = eval
-            print("Time to make move: " + str(time.time()-start_time))
+            #print("Time to make move: " + str(time.time()-start_time))
             return move, eval
 
         self.check_game_phase(board)
@@ -471,7 +471,7 @@ class Engine:
         else:
             board.pop()
 
-        print("Time to make move: " + str(time.time()-start_time))
+        #print("Time to make move: " + str(time.time()-start_time))
         return move, self.eval_value
 
     def make_move_helper(self, board, depth):

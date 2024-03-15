@@ -16,6 +16,7 @@ class Engine:
         self.is_eg = False
         self.is_op = True
         self.eval_value = 0
+        self.num_exceptions = 0
         self.opening_prep = True
         self.opening_path = "./openings/baron30.bin"
         self.sleep = False
@@ -73,15 +74,15 @@ class Engine:
             score += self.values[piece]
 
         if board.turn == chess.WHITE:
-            if abs(score) < 110:
-                self.eval_value = (self.eval_value-100)/400
+            if abs(score) < 200:
+                self.eval_value = (self.eval_value-150)/400
             else:
-                self.eval_value = (self.eval_value-100)/100
+                self.eval_value = (self.eval_value-150)/100
         else:
-            if abs(score) < 110:
-                self.eval_value = (self.eval_value+100)/400
+            if abs(score) < 200:
+                self.eval_value = (self.eval_value+150)/400
             else:
-                self.eval_value = (self.eval_value+100)/100
+                self.eval_value = (self.eval_value+150)/100
 
     # Define your own evaluation function here
     # Input positions are a single string with characters represeting pieces (lowercase black, uppercase white)
@@ -148,6 +149,8 @@ class Engine:
             entries = []
             for entry in reader.find_all(board):
                 entries.append(entry.move)
+
+            random.shuffle(entries)
         return entries
 
     def check_game_phase(self, board):
@@ -175,7 +178,7 @@ class Engine:
 
         # If in eg, deepen the search by 1
         if score/100 < 30 and not self.is_eg:
-            self.depth = self.depth + 1
+            #self.depth = self.depth + 1
             self.is_eg = True
 
 
@@ -190,25 +193,26 @@ class Engine:
         else:
             index = random.randint(0, len(moves)-1)
             if self.sleep:
-                time.sleep(1)
+                time.sleep(0.001)
             return moves[index], 0.3
 
 
     # Returns a UCI move based on search and evaluation of position
     # Position is a chess board
     def make_move(self, board):
-        #start_time = time.time()
+        start_time = time.time()
         if self.opening_prep:
             move, eval = self.openings(board)
             self.eval_value = eval
 
             if not self.sleep:
                 self.sleep = True
-            #print("Time to make move: " + str(time.time()-start_time))
+            print("Time to make move for minimax: " + str(time.time()-start_time))
             return move, eval
 
         self.check_game_phase(board)
-        move = self.make_move_helper(board, depth=self.depth)
+        for i in range(1, self.depth):
+            move = self.make_move_helper(board, i)
         self.eval_value_adjust(board)
 
         board.push(move)
@@ -225,7 +229,8 @@ class Engine:
                 return move, 0
         else:
             board.pop()
-        #print("Time to make move: " + str(time.time()-start_time))
+        
+        print("Time to make move for minimax: " + str(time.time()-start_time))
         return move, self.eval_value
 
 
@@ -259,12 +264,22 @@ class Engine:
         self.eval_value = best_move
         return best_final
 
-
     @lru_cache
     def minimax_helper(self, depth, board, alpha, beta, is_maximizing):
+        best_move = 100000000000
+        if is_maximizing:
+            best_move = -1000000000000
+        if self.calc_extension(board) == 1:
+            for move in list(board.legal_moves):
+                board.push(move)
+                value = self.minimax_helper(depth, board, alpha, beta, False)
+                board.pop()
+                best_move = max(best_move, value)
+            return best_move
+
         if depth <= 0 or board.is_game_over():
             return self.evaluate(board)
-
+        
         moves = list(board.legal_moves)
         if depth >= 4:
             move_val_estimates = []
@@ -299,6 +314,15 @@ class Engine:
                     break
             return best_move
         
+    
+    def calc_extension(self, board):
+        extension = 0
+        if self.num_exceptions < 5:
+            if board.is_check():
+                extension = 1
+                self.num_exceptions += 1
+
+        return extension
 
     def next_best_move(self, draw_move, board, depth):
         is_white = False
